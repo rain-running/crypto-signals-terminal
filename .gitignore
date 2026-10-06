@@ -1,0 +1,12 @@
+node_modules/
+.bun-cache/
+dist/
+*.tsbuildinfo
+app.db
+*.db
+.env
+.env.*
+.space-build/
+.space-build-cvm/
+.harness/
+audits/
