@@ -60,11 +60,22 @@ function formatCompact(value: number | null): string {
   return value.toFixed(2);
 }
 
+function formatPct(value: number | null, digits = 1): string {
+  if (value === null || !Number.isFinite(value)) return "—";
+  return `${(value * 100).toFixed(digits)}%`;
+}
+
+const kellyFractions = [
+  { value: 1, label: "全凯利" },
+  { value: 0.5, label: "半凯利" },
+  { value: 0.25, label: "1/4 凯利" },
+];
+
 function markerFor(mark: StructureMark): SeriesMarker<UTCTimestamp> {
   const time = mark.time as UTCTimestamp;
   switch (mark.kind) {
-    case "swingHigh": return { time, position: "aboveBar", color: "#ef6a6a", shape: "circle", size: 0.7 };
-    case "swingLow": return { time, position: "belowBar", color: "#39c889", shape: "circle", size: 0.7 };
+    case "swingHigh": return { time, position: "aboveBar", color: "#f2b84b", shape: "circle", size: 0.7 };
+    case "swingLow": return { time, position: "belowBar", color: "#38d9c8", shape: "circle", size: 0.7 };
     case "bosUp": return { time, position: "aboveBar", color: "#38d9c8", shape: "arrowUp", text: "BOS↑", size: 1 };
     case "bosDown": return { time, position: "belowBar", color: "#f2b84b", shape: "arrowDown", text: "BOS↓", size: 1 };
     case "bearDiv": return { time, position: "aboveBar", color: "#f2b84b", shape: "square", text: "顶背离", size: 0.8 };
@@ -86,8 +97,8 @@ function MarketChart({ bars, marks, asset }: { bars: Bar[]; marks: StructureMark
     const chart = createChart(container, {
       width: container.clientWidth,
       height: container.clientWidth < 640 ? 390 : 520,
-      layout: { background: { type: ColorType.Solid, color: "#0c1217" }, textColor: "#8b99a6", fontFamily: "IBM Plex Mono, SFMono-Regular, Consolas, monospace", fontSize: 11 },
-      grid: { vertLines: { color: "#172129" }, horzLines: { color: "#172129" } },
+      layout: { background: { type: ColorType.Solid, color: "#0b0e13" }, textColor: "#8b99a6", fontFamily: "IBM Plex Mono, SFMono-Regular, Consolas, monospace", fontSize: 11 },
+      grid: { vertLines: { color: "#141b23" }, horzLines: { color: "#141b23" } },
       rightPriceScale: { borderColor: "#26333d", scaleMargins: { top: 0.08, bottom: 0.23 } },
       timeScale: { borderColor: "#26333d", timeVisible: true, secondsVisible: false, rightOffset: 4, barSpacing: 7, minBarSpacing: 2 },
       crosshair: { mode: CrosshairMode.Normal, vertLine: { color: "#52606b", labelBackgroundColor: "#26333d" }, horzLine: { color: "#52606b", labelBackgroundColor: "#26333d" } },
@@ -95,7 +106,7 @@ function MarketChart({ bars, marks, asset }: { bars: Bar[]; marks: StructureMark
     });
     chartRef.current = chart;
     const candles = chart.addSeries(CandlestickSeries, {
-      upColor: "#39c889", downColor: "#ef6a6a", wickUpColor: "#39c889", wickDownColor: "#ef6a6a", borderVisible: false,
+      upColor: "#2ebd85", downColor: "#f6465d", wickUpColor: "#2ebd85", wickDownColor: "#f6465d", borderVisible: false,
     });
     candles.setData(bars.map((bar) => ({ time: bar.time as UTCTimestamp, open: bar.open, high: bar.high, low: bar.low, close: bar.close })));
 
@@ -106,7 +117,7 @@ function MarketChart({ bars, marks, asset }: { bars: Bar[]; marks: StructureMark
     volume.setData(bars.filter((bar) => bar.volume !== null).map((bar) => ({
       time: bar.time as UTCTimestamp,
       value: bar.volume ?? 0,
-      color: bar.close >= bar.open ? "rgba(57,200,137,.34)" : "rgba(239,106,106,.34)",
+      color: bar.close >= bar.open ? "rgba(46,189,133,.30)" : "rgba(246,70,93,.30)",
     })));
 
     const addLine = (values: Array<number | null>, color: string, width: 1 | 2, style = LineStyle.Solid) => {
@@ -116,8 +127,8 @@ function MarketChart({ bars, marks, asset }: { bars: Bar[]; marks: StructureMark
         return value === null || value === undefined || !bar ? [] : [{ time: bar.time as UTCTimestamp, value }];
       }));
     };
-    addLine(ema20, "#38d9c8", 2);
-    addLine(ema50, "#f2b84b", 2);
+    addLine(ema20, "#f0b90b", 2);
+    addLine(ema50, "#4f8cff", 2);
     addLine(bands.upper, "rgba(155,173,187,.62)", 1, LineStyle.Dashed);
     addLine(bands.middle, "rgba(155,173,187,.28)", 1, LineStyle.Dotted);
     addLine(bands.lower, "rgba(155,173,187,.62)", 1, LineStyle.Dashed);
@@ -152,10 +163,10 @@ export function App() {
   const [asset, setAsset] = useState<Asset>("BTC");
   const [timeframe, setTimeframe] = useState<Timeframe>("15m");
   const [showStructure, setShowStructure] = useState(true);
-  const [capital, setCapital] = useState("10000");
-  const [riskPct, setRiskPct] = useState("1");
-  const [entry, setEntry] = useState("");
-  const [stop, setStop] = useState("");
+  const [kellyCapital, setKellyCapital] = useState("10000");
+  const [kellyWinRate, setKellyWinRate] = useState("55");
+  const [kellyRR, setKellyRR] = useState("2");
+  const [kellyFraction, setKellyFraction] = useState(0.5);
 
   const market = useQuery({
     queryKey: ["market", asset, timeframe],
@@ -199,14 +210,18 @@ export function App() {
   const volatilityState = analysis.atrPercentile === null ? "—" : analysis.atrPercentile > 70 ? "高波动" : analysis.atrPercentile < 30 ? "低波动" : "正常";
   const rsiState = analysis.rsi === null ? "—" : analysis.rsi >= 70 ? "偏热" : analysis.rsi <= 30 ? "偏冷" : "中性";
 
-  const capitalNumber = Number(capital);
-  const riskNumber = Number(riskPct);
-  const entryNumber = Number(entry);
-  const stopNumber = Number(stop);
-  const riskAmount = capitalNumber > 0 && riskNumber > 0 ? capitalNumber * riskNumber / 100 : null;
-  const stopDistance = entryNumber > 0 && stopNumber > 0 ? Math.abs(entryNumber - stopNumber) : null;
-  const positionSize = riskAmount !== null && stopDistance && stopDistance > 0 ? riskAmount / stopDistance : null;
-  const notional = positionSize !== null && entryNumber > 0 ? positionSize * entryNumber : null;
+  // 凯利公式：f* = p − (1−p) / R（p 为胜率，R 为平均盈亏比）
+  const kellyP = Number(kellyWinRate) / 100;
+  const kellyR = Number(kellyRR);
+  const kellyCapNum = Number(kellyCapital);
+  const fullKelly =
+    Number.isFinite(kellyP) && kellyP >= 0 && kellyP <= 1 && Number.isFinite(kellyR) && kellyR > 0
+      ? kellyP - (1 - kellyP) / kellyR
+      : null;
+  const hasEdge = fullKelly !== null && fullKelly > 0;
+  const adjKelly = hasEdge ? fullKelly * kellyFraction : null;
+  const kellyAmount = adjKelly !== null && kellyCapNum > 0 ? kellyCapNum * adjKelly : null;
+  const kellyEV = fullKelly !== null ? kellyP * kellyR - (1 - kellyP) : null; // 每单位风险的期望收益
 
   return (
     <div className="terminal min-h-screen">
@@ -303,19 +318,34 @@ export function App() {
                 )}
               </section>
 
-              <section className="section-block calculator">
-                <div className="section-title"><h2>仓位计算器</h2><span>固定风险法</span></div>
+              <section className="section-block kelly">
+                <div className="section-title"><h2>凯利公式仓位</h2><span>f* = p − (1−p) / R</span></div>
                 <div className="form-grid">
-                  <label><span>本金（USD）</span><input aria-label="本金（USD）" inputMode="decimal" value={capital} onChange={(event) => setCapital(event.target.value)} /></label>
-                  <label><span>风险比例（%）</span><input aria-label="风险比例（%）" inputMode="decimal" value={riskPct} onChange={(event) => setRiskPct(event.target.value)} /></label>
-                  <label><span>入场价</span><input aria-label="入场价" inputMode="decimal" value={entry} onChange={(event) => setEntry(event.target.value)} placeholder={formatPrice(latest?.close ?? null, asset)} /></label>
-                  <label><span>止损价</span><input aria-label="止损价" inputMode="decimal" value={stop} onChange={(event) => setStop(event.target.value)} placeholder="输入计划价位" /></label>
+                  <label><span>本金（USD）</span><input aria-label="本金（USD）" inputMode="decimal" value={kellyCapital} onChange={(event) => setKellyCapital(event.target.value)} /></label>
+                  <label><span>胜率（%）</span><input aria-label="胜率（%）" inputMode="decimal" value={kellyWinRate} onChange={(event) => setKellyWinRate(event.target.value)} placeholder="如 55" /></label>
+                  <label><span>平均盈亏比 R</span><input aria-label="平均盈亏比 R" inputMode="decimal" value={kellyRR} onChange={(event) => setKellyRR(event.target.value)} placeholder="如 2" /></label>
+                  <div className="kelly-fraction">
+                    <span>凯利系数</span>
+                    <div className="fraction-tabs" role="group" aria-label="凯利系数">
+                      {kellyFractions.map((item) => (
+                        <button key={item.value} className={item.value === kellyFraction ? "active" : ""} onClick={() => setKellyFraction(item.value)}>{item.label}</button>
+                      ))}
+                    </div>
+                  </div>
                 </div>
-                <div className="calc-output">
-                  <div><span>风险金额</span><strong>{riskAmount === null ? "—" : `$${formatPrice(riskAmount, "BTC")}`}</strong></div>
-                  <div><span>仓位数量</span><strong>{positionSize === null ? "—" : `${formatCompact(positionSize)} ${asset}`}</strong></div>
-                  <div><span>名义价值</span><strong>{notional === null ? "—" : `$${formatCompact(notional)}`}</strong></div>
-                </div>
+                {hasEdge ? (
+                  <div className="calc-output">
+                    <div><span>全凯利比例 f*</span><strong>{formatPct(fullKelly)}</strong></div>
+                    <div><span>建议仓位比例</span><strong className="tone-cyan">{formatPct(adjKelly)}</strong></div>
+                    <div><span>建议仓位金额</span><strong>{kellyAmount === null ? "—" : `$${formatCompact(kellyAmount)}`}</strong></div>
+                  </div>
+                ) : (
+                  <p className="kelly-verdict">{fullKelly === null ? "请输入有效的胜率与盈亏比。" : "期望值为负：该策略没有下注优势，建议不下注。"}</p>
+                )}
+                <p className="kelly-note">
+                  {kellyEV !== null && Number.isFinite(kellyEV) ? `每单位风险期望收益 ${kellyEV >= 0 ? "+" : ""}${kellyEV.toFixed(2)}。` : ""}
+                  全凯利波动剧烈，实务中常用半凯利或更低系数。
+                </p>
               </section>
             </div>
           </>
