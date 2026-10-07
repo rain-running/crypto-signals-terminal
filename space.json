@@ -1,8 +1,0 @@
-{
-  "runtime": "typescript",
-  "platformVersion": 24,
-  "entry": "client/dist/index.html",
-  "name": "市场结构终端",
-  "slug": "space",
-  "managedCronJobs": []
-}
