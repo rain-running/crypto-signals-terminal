@@ -4,6 +4,19 @@
 
 **原则：只呈现市场结构，不输出任何做多 / 做空交易信号，不构成投资建议。**
 
+> 这是 `vercel-port` 分支：从 Hatch space 运行时移植出的**标准 Vercel 可部署版本**。
+> `main` 分支保留原始 Hatch 版本源码。
+
+## 移植说明（相对原版的改动）
+
+- 服务端 `getMarketData` action → `api/market-data.ts`（Vercel serverless function），行情源降级链逻辑不变
+- 客户端 RPC（`@hatch/space-sdk`）→ 标准 `fetch`（`src/api.ts`），调用签名不变
+- `spaceQueryClient` → 标准 `@tanstack/react-query` `QueryClient`
+- 去掉 `SafeAreaTopScrim`（顶栏已有 `env(safe-area-inset-top)` 适配）
+- 构建：Bun + SDK 打包脚本 → Vite（`npm run build`）
+- 删除未使用的 drizzle/SQLite schema 与 `recharts` 依赖
+- 单源请求超时从 9 秒改为 6 秒（Vercel Hobby 函数最长执行 10 秒）
+
 ## 功能
 
 - 标的：BTC / ETH / SOL；周期：15m / 1h / 4h
@@ -12,28 +25,28 @@
 - Swing 高低点、BOS（结构突破）识别
 - RSI 背离标记
 - 支撑阻力与流动性区
-- 仓位计算器（基于 ATR 的中性风险测算，不给方向）
+- 仓位计算器（固定风险法，不给方向）
 
 ## 数据源（自动降级）
 
-服务端按顺序尝试，失败自动降级到下一源：
+`api/market-data.ts` 按顺序尝试，失败自动降级：
 
 1. Binance 合约 K 线 → 2. Binance 现货 K 线 → 3. Bybit V5 → 4. Kraken OHLC → 5. CoinGecko
 
-## 技术栈
-
-- React 19 + TypeScript，lightweight-charts / recharts，Tailwind CSS 4
-- Bun runtime，drizzle-orm
-- 客户端通过 typed RPC action 调用服务端（`server/src/actions.ts`），指标与结构全部在客户端本地计算
-
-## 运行说明
-
-本项目最初构建于 Hatch space 运行时，依赖内部包 `@hatch/space-sdk`（未发布到 npm），因此**无法**仅靠 `bun install` 在本仓库独立运行。此处发布源码供参考与二次开发。
+## 本地开发
 
 ```
-bun install
-bun run build
+npm install
+npm run dev      # 前端，http://localhost:5173（API 需 vercel dev 或已部署的后端）
 ```
+
+## 部署到 Vercel
+
+1. 在 Vercel 新建项目，关联本仓库，选择 `vercel-port` 分支
+2. Framework 选择 Vite（`vercel.json` 已配好构建命令与输出目录）
+3. 无需环境变量，直接部署
+
+`/api/market-data.ts` 会被自动识别为 serverless function。
 
 ## 免责
 
