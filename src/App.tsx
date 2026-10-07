@@ -71,19 +71,21 @@ const kellyFractions = [
   { value: 0.25, label: "1/4 凯利" },
 ];
 
-function markerFor(mark: StructureMark): SeriesMarker<UTCTimestamp> {
+type DisplayMark = StructureMark & { quiet?: boolean };
+
+function markerFor(mark: DisplayMark): SeriesMarker<UTCTimestamp> {
   const time = mark.time as UTCTimestamp;
   switch (mark.kind) {
     case "swingHigh": return { time, position: "aboveBar", color: "#eab308", shape: "circle", size: 0.7 };
     case "swingLow": return { time, position: "belowBar", color: "#2dd4bf", shape: "circle", size: 0.7 };
-    case "bosUp": return { time, position: "aboveBar", color: "#2dd4bf", shape: "arrowUp", text: "BOS↑", size: 1 };
-    case "bosDown": return { time, position: "belowBar", color: "#eab308", shape: "arrowDown", text: "BOS↓", size: 1 };
+    case "bosUp": return { time, position: "aboveBar", color: "#2dd4bf", shape: "arrowUp", size: 0.8, ...(mark.quiet ? {} : { text: "BOS↑" }) };
+    case "bosDown": return { time, position: "belowBar", color: "#eab308", shape: "arrowDown", size: 0.8, ...(mark.quiet ? {} : { text: "BOS↓" }) };
     case "bearDiv": return { time, position: "aboveBar", color: "#eab308", shape: "square", text: "顶背离", size: 0.8 };
     case "bullDiv": return { time, position: "belowBar", color: "#2dd4bf", shape: "square", text: "底背离", size: 0.8 };
   }
 }
 
-function MarketChart({ bars, marks, asset }: { bars: Bar[]; marks: StructureMark[]; asset: Asset }) {
+function MarketChart({ bars, marks, asset }: { bars: Bar[]; marks: DisplayMark[]; asset: Asset }) {
   const containerRef = useRef<HTMLDivElement>(null);
   const chartRef = useRef<IChartApi | null>(null);
   const closes = useMemo(() => bars.map((bar) => bar.close), [bars]);
@@ -202,6 +204,20 @@ export function App() {
     };
   }, [bars]);
 
+  // BOS 文字标签只保留最近 12 个，更早的只留小箭头，避免图表拥挤
+  const displayMarks = useMemo<DisplayMark[]>(() => {
+    const indexed = analysis.marks.map((mark, index) => ({ mark, index }));
+    const bos = indexed
+      .filter(({ mark }) => mark.kind === "bosUp" || mark.kind === "bosDown")
+      .sort((a, b) => a.mark.time - b.mark.time);
+    const keepText = new Set(bos.slice(-12).map(({ index }) => index));
+    return analysis.marks.map((mark, index) =>
+      (mark.kind === "bosUp" || mark.kind === "bosDown") && !keepText.has(index)
+        ? { ...mark, quiet: true }
+        : mark,
+    );
+  }, [analysis.marks]);
+
   const latest = bars.at(-1) ?? null;
   const previous = bars.at(-2) ?? null;
   const change = latest && previous ? (latest.close / previous.close - 1) * 100 : null;
@@ -271,7 +287,7 @@ export function App() {
                   <div className="legend"><span className="ema20">EMA20</span><span className="ema50">EMA50</span><span className="bb">布林带</span></div>
                   <label className="toggle"><input type="checkbox" checked={showStructure} onChange={(event) => setShowStructure(event.target.checked)} /><span>结构标记</span></label>
                 </div>
-                <MarketChart bars={bars} marks={showStructure ? analysis.marks : []} asset={asset} />
+                <MarketChart bars={bars} marks={showStructure ? displayMarks : []} asset={asset} />
                 {bars.every((bar) => bar.volume === null) && <p className="volume-note">当前降级源未提供成交量。</p>}
               </section>
 
