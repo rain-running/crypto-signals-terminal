@@ -74,12 +74,12 @@ const kellyFractions = [
 function markerFor(mark: StructureMark): SeriesMarker<UTCTimestamp> {
   const time = mark.time as UTCTimestamp;
   switch (mark.kind) {
-    case "swingHigh": return { time, position: "aboveBar", color: "#f2b84b", shape: "circle", size: 0.7 };
-    case "swingLow": return { time, position: "belowBar", color: "#38d9c8", shape: "circle", size: 0.7 };
-    case "bosUp": return { time, position: "aboveBar", color: "#38d9c8", shape: "arrowUp", text: "BOS↑", size: 1 };
-    case "bosDown": return { time, position: "belowBar", color: "#f2b84b", shape: "arrowDown", text: "BOS↓", size: 1 };
-    case "bearDiv": return { time, position: "aboveBar", color: "#f2b84b", shape: "square", text: "顶背离", size: 0.8 };
-    case "bullDiv": return { time, position: "belowBar", color: "#38d9c8", shape: "square", text: "底背离", size: 0.8 };
+    case "swingHigh": return { time, position: "aboveBar", color: "#eab308", shape: "circle", size: 0.7 };
+    case "swingLow": return { time, position: "belowBar", color: "#2dd4bf", shape: "circle", size: 0.7 };
+    case "bosUp": return { time, position: "aboveBar", color: "#2dd4bf", shape: "arrowUp", text: "BOS↑", size: 1 };
+    case "bosDown": return { time, position: "belowBar", color: "#eab308", shape: "arrowDown", text: "BOS↓", size: 1 };
+    case "bearDiv": return { time, position: "aboveBar", color: "#eab308", shape: "square", text: "顶背离", size: 0.8 };
+    case "bullDiv": return { time, position: "belowBar", color: "#2dd4bf", shape: "square", text: "底背离", size: 0.8 };
   }
 }
 
@@ -97,16 +97,16 @@ function MarketChart({ bars, marks, asset }: { bars: Bar[]; marks: StructureMark
     const chart = createChart(container, {
       width: container.clientWidth,
       height: container.clientWidth < 640 ? 390 : 520,
-      layout: { background: { type: ColorType.Solid, color: "#0b0e13" }, textColor: "#8b99a6", fontFamily: "IBM Plex Mono, SFMono-Regular, Consolas, monospace", fontSize: 11 },
-      grid: { vertLines: { color: "#141b23" }, horzLines: { color: "#141b23" } },
-      rightPriceScale: { borderColor: "#26333d", scaleMargins: { top: 0.08, bottom: 0.23 } },
-      timeScale: { borderColor: "#26333d", timeVisible: true, secondsVisible: false, rightOffset: 4, barSpacing: 7, minBarSpacing: 2 },
-      crosshair: { mode: CrosshairMode.Normal, vertLine: { color: "#52606b", labelBackgroundColor: "#26333d" }, horzLine: { color: "#52606b", labelBackgroundColor: "#26333d" } },
+      layout: { background: { type: ColorType.Solid, color: "#090d13" }, textColor: "#5f6e7d", fontFamily: "IBM Plex Mono, SFMono-Regular, Consolas, monospace", fontSize: 11 },
+      grid: { vertLines: { color: "#0f151d" }, horzLines: { color: "#0f151d" } },
+      rightPriceScale: { borderColor: "rgba(148,163,184,0.14)", scaleMargins: { top: 0.08, bottom: 0.23 } },
+      timeScale: { borderColor: "rgba(148,163,184,0.14)", timeVisible: true, secondsVisible: false, rightOffset: 4, barSpacing: 7, minBarSpacing: 2 },
+      crosshair: { mode: CrosshairMode.Normal, vertLine: { color: "#3b4a5a", labelBackgroundColor: "#1a232e" }, horzLine: { color: "#3b4a5a", labelBackgroundColor: "#1a232e" } },
       localization: { priceFormatter: (price: number) => formatPrice(price, asset) },
     });
     chartRef.current = chart;
     const candles = chart.addSeries(CandlestickSeries, {
-      upColor: "#2ebd85", downColor: "#f6465d", wickUpColor: "#2ebd85", wickDownColor: "#f6465d", borderVisible: false,
+      upColor: "#26a69a", downColor: "#ef5350", wickUpColor: "#26a69a", wickDownColor: "#ef5350", borderVisible: false,
     });
     candles.setData(bars.map((bar) => ({ time: bar.time as UTCTimestamp, open: bar.open, high: bar.high, low: bar.low, close: bar.close })));
 
@@ -117,7 +117,7 @@ function MarketChart({ bars, marks, asset }: { bars: Bar[]; marks: StructureMark
     volume.setData(bars.filter((bar) => bar.volume !== null).map((bar) => ({
       time: bar.time as UTCTimestamp,
       value: bar.volume ?? 0,
-      color: bar.close >= bar.open ? "rgba(46,189,133,.30)" : "rgba(246,70,93,.30)",
+      color: bar.close >= bar.open ? "rgba(38,166,154,.28)" : "rgba(239,83,80,.28)",
     })));
 
     const addLine = (values: Array<number | null>, color: string, width: 1 | 2, style = LineStyle.Solid) => {
@@ -127,11 +127,11 @@ function MarketChart({ bars, marks, asset }: { bars: Bar[]; marks: StructureMark
         return value === null || value === undefined || !bar ? [] : [{ time: bar.time as UTCTimestamp, value }];
       }));
     };
-    addLine(ema20, "#f0b90b", 2);
-    addLine(ema50, "#4f8cff", 2);
-    addLine(bands.upper, "rgba(155,173,187,.62)", 1, LineStyle.Dashed);
-    addLine(bands.middle, "rgba(155,173,187,.28)", 1, LineStyle.Dotted);
-    addLine(bands.lower, "rgba(155,173,187,.62)", 1, LineStyle.Dashed);
+    addLine(ema20, "#eab308", 2);
+    addLine(ema50, "#60a5fa", 2);
+    addLine(bands.upper, "rgba(153,167,181,.5)", 1, LineStyle.Dashed);
+    addLine(bands.middle, "rgba(153,167,181,.22)", 1, LineStyle.Dotted);
+    addLine(bands.lower, "rgba(153,167,181,.5)", 1, LineStyle.Dashed);
     createSeriesMarkers(candles, marks.map(markerFor));
     chart.timeScale().fitContent();
 
@@ -206,6 +206,7 @@ export function App() {
   const previous = bars.at(-2) ?? null;
   const change = latest && previous ? (latest.close / previous.close - 1) * 100 : null;
   const adxState = analysis.adx === null ? "—" : analysis.adx > 25 ? "趋势市（强）" : analysis.adx >= 20 ? "趋势市（弱）" : "震荡市";
+  const isTrend = analysis.adx !== null && analysis.adx >= 20;
   const diState = analysis.plusDi === null || analysis.minusDi === null ? "—" : analysis.plusDi >= analysis.minusDi ? "+DI 占优" : "-DI 占优";
   const volatilityState = analysis.atrPercentile === null ? "—" : analysis.atrPercentile > 70 ? "高波动" : analysis.atrPercentile < 30 ? "低波动" : "正常";
   const rsiState = analysis.rsi === null ? "—" : analysis.rsi >= 70 ? "偏热" : analysis.rsi <= 30 ? "偏冷" : "中性";
@@ -252,7 +253,10 @@ export function App() {
         </section>
 
         {market.isPending ? (
-          <div className="loading-panel"><div className="pulse-line" /><p>正在读取市场数据…</p></div>
+          <div className="loading-panel">
+            <div className="skeleton-chart" aria-hidden="true"><i /><i /><i /></div>
+            <p>正在读取市场数据…</p>
+          </div>
         ) : market.error || market.data?.ok === false ? (
           <div className="error-panel">
             <strong>行情暂时不可用</strong>
@@ -276,7 +280,7 @@ export function App() {
                   <div className="section-title"><h2>市况状态</h2><span>{bars.length} 根样本</span></div>
                   <div className="state-hero">
                     <div><span>ADX 14</span><strong>{analysis.adx?.toFixed(1) ?? "—"}</strong></div>
-                    <div><span>市场形态</span><strong>{adxState}</strong></div>
+                    <span className={`regime-badge ${isTrend ? "trend" : "chop"}`}>{adxState}</span>
                   </div>
                   <StatusMeter label="方向强度" value={diState} tone={analysis.plusDi !== null && analysis.minusDi !== null && analysis.plusDi >= analysis.minusDi ? "green" : "red"} />
                   <div className="di-track"><span style={{ width: `${Math.max(0, Math.min(100, analysis.plusDi ?? 50))}%` }} /></div>
@@ -285,7 +289,7 @@ export function App() {
 
                 <section className="section-block volatility">
                   <div className="section-title"><h2>波动率</h2><span>ATR 14</span></div>
-                  <div className="metric-pair"><strong>{formatPrice(analysis.atr, asset)}</strong><span>{volatilityState}</span></div>
+                  <div className="metric-pair"><strong>{formatPrice(analysis.atr, asset)}</strong><span className="vol-tag">{volatilityState}</span></div>
                   <div className="percentile"><div style={{ width: `${analysis.atrPercentile ?? 0}%` }} /><i style={{ left: `${analysis.atrPercentile ?? 0}%` }} /></div>
                   <p>历史分位 {analysis.atrPercentile?.toFixed(0) ?? "—"}% · {analysis.atrSamples} 个同周期样本</p>
                 </section>
